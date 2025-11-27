@@ -26,23 +26,31 @@
         /* Animations */
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
         .slide-up { animation: slideUp 0.6s ease-out; }
+        .pop-in { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .logo-hover:hover { transform: scale(1.05); transition: transform 0.3s ease; }
         
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
-        /* Modal Scroll */
-        .modal-content::-webkit-scrollbar { width: 6px; }
-        .modal-content::-webkit-scrollbar-track { background: #f1f1f1; }
-        .modal-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        /* Scrollbars */
+        .modal-content::-webkit-scrollbar, .chat-scroll::-webkit-scrollbar { width: 6px; }
+        .modal-content::-webkit-scrollbar-track, .chat-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-content::-webkit-scrollbar-thumb, .chat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        /* Chat Bubble Animation */
+        .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
 
     <div id="app"></div>
     <div id="modal-container"></div>
-    <!-- Ad Container -->
     <div id="ad-container"></div>
+    <div id="ai-widget-container"></div>
 
     <script>
         // --- 1. SVG Logo ---
@@ -81,7 +89,6 @@
             { id: 8, text: "Do you prefer independent work?", icon: "fa-coffee" }
         ];
 
-        // --- 3. Mock Ads Data ---
         const ADS = [
             { title: "Special Offer!", desc: "Get 50% off on all coding bootcamps today.", color: "bg-blue-600" },
             { title: "Learn Python Fast", desc: "The ultimate guide to Python in 2024.", color: "bg-green-600" },
@@ -89,7 +96,7 @@
             { title: "Cloud Hosting Sale", desc: "Host your website for just $1/month.", color: "bg-orange-600" }
         ];
 
-        // --- 4. State Management ---
+        // --- 3. State Management ---
         let state = {
             introShown: false,
             surveyCompleted: false,
@@ -101,44 +108,91 @@
             selectedExpert: null,
             modals: { premium: false, schedule: false },
             showAd: false,
-            adTimerId: null
+            adTimerId: null,
+            // AI Agent State
+            isChatOpen: false,
+            chatMessages: [{ sender: 'bot', text: 'Hi! I am the SkillNex AI. How can I help you today?' }]
         };
 
-        // --- 5. Logic & Initialization ---
+        // --- 4. Logic & Initialization ---
         function init() {
             renderApp();
+            renderAIWidget(); // Initial render of the closed widget
         }
 
         // --- Ad Logic ---
         function startAdLoop() {
-            // Clear any existing timer first
             if (state.adTimerId) clearInterval(state.adTimerId);
-
-            // Only start if not premium
             if (!state.isPremium) {
-                console.log("Starting Ad Loop (Every 3 seconds)");
                 state.adTimerId = setInterval(() => {
-                    // Only show ad if one isn't already open and no other modal is open
-                    if (!state.showAd && !state.modals.premium && !state.modals.schedule && !state.isPremium) {
+                    if (!state.showAd && !state.modals.premium && !state.modals.schedule && !state.isPremium && !state.isChatOpen) {
                         state.showAd = true;
                         renderAds();
                     }
-                }, 3000); // 3000ms = 3 seconds
+                }, 3000); // 3s
             }
         }
 
         function stopAdLoop() {
-            if (state.adTimerId) {
-                clearInterval(state.adTimerId);
-                state.adTimerId = null;
-            }
-            state.showAd = false;
-            renderAds(); // Clears the ad
-        }
-
-        function closeAd() {
+            if (state.adTimerId) { clearInterval(state.adTimerId); state.adTimerId = null; }
             state.showAd = false;
             renderAds();
+        }
+
+        function closeAd() { state.showAd = false; renderAds(); }
+
+        // --- AI Chat Logic ---
+        function toggleChat() {
+            state.isChatOpen = !state.isChatOpen;
+            renderAIWidget();
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Add User Message
+            state.chatMessages.push({ sender: 'user', text: text });
+            input.value = '';
+            renderAIWidget();
+            
+            // Scroll to bottom
+            setTimeout(() => {
+                const scrollContainer = document.getElementById('chat-messages');
+                if(scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+            }, 10);
+
+            // Simulate AI Delay & Response
+            setTimeout(() => {
+                const response = generateAIResponse(text);
+                state.chatMessages.push({ sender: 'bot', text: response });
+                renderAIWidget();
+                // Scroll to bottom again
+                setTimeout(() => {
+                    const scrollContainer = document.getElementById('chat-messages');
+                    if(scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+                }, 10);
+            }, 1000);
+        }
+
+        function generateAIResponse(input) {
+            const lowerInput = input.toLowerCase();
+            if (lowerInput.includes('premium') || lowerInput.includes('price') || lowerInput.includes('cost')) {
+                return state.isPremium 
+                    ? "You are currently on the Premium plan. Enjoy your unlimited access!" 
+                    : "Our Premium plan is ₹99/month or ₹1099/year. It removes ads and unlocks expert mentorship.";
+            }
+            if (lowerInput.includes('course') || lowerInput.includes('learn')) {
+                return "We recommend checking the Dashboard for courses tailored to your survey results. We have great Data Science and Web Dev tracks.";
+            }
+            if (lowerInput.includes('expert') || lowerInput.includes('mentor')) {
+                return "You can book 1-on-1 sessions with industry experts from Google, Netflix, and more in the 'Experts' tab.";
+            }
+            if (lowerInput.includes('hello') || lowerInput.includes('hi')) {
+                return "Hello there! Ready to accelerate your career?";
+            }
+            return "I'm still learning! Try asking about 'premium', 'courses', or 'experts'.";
         }
 
         // --- Render Functions ---
@@ -160,68 +214,104 @@
             }
             renderModals();
             renderAds();
+            renderAIWidget(); // Ensure widget persists
         }
 
+        function renderAIWidget() {
+            const container = document.getElementById('ai-widget-container');
+            
+            // Don't show on intro screen
+            if (!state.introShown) {
+                container.innerHTML = '';
+                return;
+            }
+
+            if (!state.isChatOpen) {
+                // Closed State (FAB)
+                container.innerHTML = `
+                    <button onclick="toggleChat()" class="fixed bottom-6 right-6 w-14 h-14 bg-brand-teal text-brand-dark rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center z-50 pop-in border-2 border-brand-dark">
+                        <i class="fas fa-robot text-2xl"></i>
+                    </button>
+                `;
+            } else {
+                // Open State (Chat Window)
+                container.innerHTML = `
+                    <div class="fixed bottom-6 right-6 w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col z-50 pop-in overflow-hidden" style="height: 500px; max-height: 80vh;">
+                        <!-- Header -->
+                        <div class="bg-brand-dark p-4 flex justify-between items-center text-white">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 bg-brand-teal rounded-full flex items-center justify-center text-brand-dark">
+                                    <i class="fas fa-robot text-sm"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-sm">SkillNex AI</h3>
+                                    <p class="text-[10px] text-gray-300">Online</p>
+                                </div>
+                            </div>
+                            <button onclick="toggleChat()" class="text-gray-300 hover:text-white"><i class="fas fa-times"></i></button>
+                        </div>
+                        
+                        <!-- Messages -->
+                        <div id="chat-messages" class="flex-1 p-4 overflow-y-auto bg-gray-50 chat-scroll">
+                            ${state.chatMessages.map(msg => `
+                                <div class="flex mb-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}">
+                                    <div class="max-w-[80%] rounded-xl p-3 text-sm ${msg.sender === 'user' ? 'bg-brand-dark text-white rounded-tr-none' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-sm'}">
+                                        ${msg.text}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <!-- Input -->
+                        <div class="p-3 bg-white border-t border-gray-100 flex gap-2">
+                            <input id="chat-input" type="text" placeholder="Ask me anything..." class="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal" onkeypress="if(event.key === 'Enter') sendMessage()">
+                            <button onclick="sendMessage()" class="w-10 h-10 bg-brand-dark text-white rounded-full flex items-center justify-center hover:bg-opacity-90 transition-colors">
+                                <i class="fas fa-paper-plane text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                // Auto scroll on render
+                setTimeout(() => {
+                    const scrollContainer = document.getElementById('chat-messages');
+                    if(scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+                }, 0);
+            }
+        }
+
+        // --- Standard App Renders (Same as before) ---
         function renderAds() {
             const adContainer = document.getElementById('ad-container');
-            
             if (state.showAd && !state.isPremium) {
-                // Pick a random ad
                 const randomAd = ADS[Math.floor(Math.random() * ADS.length)];
-                
                 adContainer.innerHTML = `
                     <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm fade-in">
                         <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl relative">
-                            <!-- Ad Header -->
                             <div class="${randomAd.color} p-4 text-white text-center">
                                 <p class="text-xs uppercase font-bold tracking-widest opacity-80 mb-1">Advertisement</p>
                                 <h3 class="text-2xl font-bold">${randomAd.title}</h3>
                             </div>
-                            
-                            <!-- Ad Body -->
                             <div class="p-8 text-center">
                                 <p class="text-gray-600 mb-6 text-lg">${randomAd.desc}</p>
-                                
-                                <button class="w-full py-3 bg-gray-900 text-white rounded-xl font-bold mb-3 hover:bg-gray-800">
-                                    Click Here
-                                </button>
-                                
+                                <button class="w-full py-3 bg-gray-900 text-white rounded-xl font-bold mb-3 hover:bg-gray-800">Click Here</button>
                                 <div class="text-xs text-gray-400 mb-4">or</div>
-
-                                <button onclick="closeAd()" class="text-gray-500 font-medium hover:text-gray-800 underline">
-                                    Close Ad
-                                </button>
+                                <button onclick="closeAd()" class="text-gray-500 font-medium hover:text-gray-800 underline">Close Ad</button>
                             </div>
-                            
-                            <!-- Premium Pitch -->
                             <div class="bg-gray-50 p-3 text-center border-t border-gray-100">
                                 <p class="text-xs text-gray-500">Tired of ads? <button onclick="closeAd(); handleConnect(null)" class="text-brand-dark font-bold hover:underline">Go Premium</button></p>
                             </div>
                         </div>
                     </div>
                 `;
-            } else {
-                adContainer.innerHTML = '';
-            }
+            } else { adContainer.innerHTML = ''; }
         }
 
         function renderIntro() {
-            return `
-            <div class="min-h-screen bg-white flex flex-col fade-in">
+            return `<div class="min-h-screen bg-white flex flex-col fade-in">
                 <div class="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-lg mx-auto">
                     <div class="w-32 h-32 mb-6 logo-hover">${LOGO_SVG}</div>
                     <h1 class="text-4xl md:text-5xl font-extrabold text-brand-dark mb-6 tracking-tight leading-tight slide-up">SkillNex</h1>
                     <p class="text-lg text-gray-500 mb-10 leading-relaxed slide-up" style="animation-delay: 0.1s">Discover your ideal career path, learn from top providers, and connect with industry leaders.</p>
-                    <div class="grid gap-4 w-full mb-12 text-left slide-up" style="animation-delay: 0.2s">
-                        <div class="flex items-center p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
-                            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-brand-dark shadow-sm mr-4 shrink-0"><i class="fas fa-compass"></i></div>
-                            <div><h3 class="font-bold text-gray-900">Personalized Path</h3><p class="text-xs text-gray-600">Tailored course recommendations</p></div>
-                        </div>
-                        <div class="flex items-center p-4 bg-teal-50 rounded-2xl border border-teal-100">
-                            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-brand-teal shadow-sm mr-4 shrink-0"><i class="fas fa-users"></i></div>
-                            <div><h3 class="font-bold text-gray-900">Expert Mentorship</h3><p class="text-xs text-gray-600">1-on-1 sessions with pros</p></div>
-                        </div>
-                    </div>
                     <button onclick="startApp()" class="w-full py-4 bg-brand-dark text-white rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2 slide-up" style="animation-delay: 0.3s">Get Started <i class="fas fa-arrow-right"></i></button>
                 </div>
             </div>`;
@@ -230,21 +320,15 @@
         function renderSurvey() {
             const question = SURVEY_QUESTIONS[state.surveyStep];
             const progress = ((state.surveyStep + 1) / SURVEY_QUESTIONS.length) * 100;
-            return `
-            <div class="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center p-4 fade-in">
+            return `<div class="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center p-4 fade-in">
                 <div class="bg-white max-w-lg w-full rounded-2xl shadow-xl p-8 relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-2 bg-gray-100"><div class="h-full bg-brand-dark transition-all duration-500 ease-out" style="width: ${progress}%"></div></div>
                     <div class="mt-6 text-center">
-                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-50 text-brand-dark mb-6"><span class="text-2xl font-bold">${state.surveyStep + 1}</span></div>
                         <div class="flex justify-center text-brand-teal mb-4"><i class="fas ${question.icon} text-4xl"></i></div>
                         <h2 class="text-2xl font-bold text-gray-900 mb-8 min-h-[64px] flex items-center justify-center">${question.text}</h2>
                         <div class="grid grid-cols-2 gap-4">
-                            <button onclick="handleSurveyAnswer(true)" class="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-gray-100 hover:border-green-500 hover:bg-green-50 transition-all group">
-                                <i class="fas fa-thumbs-up text-2xl text-gray-400 group-hover:text-green-500 mb-2 transition-colors"></i><span class="font-bold text-gray-700 group-hover:text-green-700">Yes</span>
-                            </button>
-                            <button onclick="handleSurveyAnswer(false)" class="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-gray-100 hover:border-red-500 hover:bg-red-50 transition-all group">
-                                <i class="fas fa-thumbs-down text-2xl text-gray-400 group-hover:text-red-500 mb-2 transition-colors"></i><span class="font-bold text-gray-700 group-hover:text-red-700">No</span>
-                            </button>
+                            <button onclick="handleSurveyAnswer(true)" class="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-gray-100 hover:border-green-500 hover:bg-green-50 transition-all group"><i class="fas fa-thumbs-up text-2xl text-gray-400 group-hover:text-green-500 mb-2 transition-colors"></i><span class="font-bold text-gray-700 group-hover:text-green-700">Yes</span></button>
+                            <button onclick="handleSurveyAnswer(false)" class="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-gray-100 hover:border-red-500 hover:bg-red-50 transition-all group"><i class="fas fa-thumbs-down text-2xl text-gray-400 group-hover:text-red-500 mb-2 transition-colors"></i><span class="font-bold text-gray-700 group-hover:text-red-700">No</span></button>
                         </div>
                     </div>
                 </div>
@@ -252,145 +336,34 @@
         }
 
         function renderNavbar() {
-            return `
-            <nav class="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div class="flex justify-between h-16 items-center">
-                        <div class="flex items-center gap-2 cursor-pointer" onclick="setView('dashboard')">
-                            <div class="w-8 h-8">${LOGO_SVG}</div><span class="text-xl font-bold tracking-tight text-brand-dark">SkillNex</span>
-                        </div>
-                        <div class="relative">
-                            <button onclick="toggleMenu()" class="flex items-center gap-2 p-1 pr-3 rounded-full border border-gray-200 hover:shadow-md transition-all">
-                                <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80" class="w-8 h-8 rounded-full object-cover" />
-                                <div class="hidden md:block text-left"><p class="text-xs font-bold text-gray-700">Alex Doe</p><p class="text-[10px] font-medium text-brand-teal uppercase">${state.isPremium ? 'Premium' : 'Free Plan'}</p></div>
-                                <i class="fas fa-bars text-gray-500 ml-1"></i>
-                            </button>
-                            ${state.isMenuOpen ? `
-                                <div class="fixed inset-0 z-30" onclick="toggleMenu()"></div>
-                                <div class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-40">
-                                    ${renderMenuItem('fa-book-reader', 'My Progress', 'progress')}
-                                    ${renderMenuItem('fa-users', 'Experts', 'experts')}
-                                    ${renderMenuItem('fa-credit-card', 'Subscription', 'subscription')}
-                                    <button onclick="alert('Copied!'); toggleMenu()" class="w-full flex items-center px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"><i class="fas fa-share-alt w-6 opacity-70"></i> Refer Now</button>
-                                    <div class="h-px bg-gray-100 my-2"></div>
-                                    <button onclick="logout()" class="w-full flex items-center px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50"><i class="fas fa-sign-out-alt w-6 opacity-70"></i> Log Out</button>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
-            </nav>`;
+            return `<nav class="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-2 cursor-pointer" onclick="setView('dashboard')"><div class="w-8 h-8">${LOGO_SVG}</div><span class="text-xl font-bold tracking-tight text-brand-dark">SkillNex</span></div>
+                <div class="relative"><button onclick="toggleMenu()" class="flex items-center gap-2 p-1 pr-3 rounded-full border border-gray-200 hover:shadow-md transition-all"><img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80" class="w-8 h-8 rounded-full object-cover" /><div class="hidden md:block text-left"><p class="text-xs font-bold text-gray-700">Alex Doe</p><p class="text-[10px] font-medium text-brand-teal uppercase">${state.isPremium ? 'Premium' : 'Free Plan'}</p></div><i class="fas fa-bars text-gray-500 ml-1"></i></button>${state.isMenuOpen ? `<div class="fixed inset-0 z-30" onclick="toggleMenu()"></div><div class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-40">${renderMenuItem('fa-book-reader', 'My Progress', 'progress')}${renderMenuItem('fa-users', 'Experts', 'experts')}${renderMenuItem('fa-credit-card', 'Subscription', 'subscription')}<button onclick="alert('Copied!'); toggleMenu()" class="w-full flex items-center px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"><i class="fas fa-share-alt w-6 opacity-70"></i> Refer Now</button><div class="h-px bg-gray-100 my-2"></div><button onclick="logout()" class="w-full flex items-center px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50"><i class="fas fa-sign-out-alt w-6 opacity-70"></i> Log Out</button></div>` : ''}</div></div></div></nav>`;
         }
 
-        function renderMenuItem(icon, label, viewName) {
-            return `<button onclick="setView('${viewName}'); toggleMenu()" class="w-full flex items-center px-4 py-3 text-sm font-medium transition-colors ${state.view === viewName ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}"><i class="fas ${icon} w-6 opacity-70"></i> ${label}</button>`;
-        }
+        function renderMenuItem(icon, label, viewName) { return `<button onclick="setView('${viewName}'); toggleMenu()" class="w-full flex items-center px-4 py-3 text-sm font-medium transition-colors ${state.view === viewName ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}"><i class="fas ${icon} w-6 opacity-70"></i> ${label}</button>`; }
 
         function renderCurrentView() {
-            switch(state.view) {
-                case 'dashboard': return renderDashboard();
-                case 'experts': return renderExperts();
-                case 'subscription': return renderSubscription();
-                case 'progress': return renderProgress();
-                default: return renderDashboard();
-            }
-        }
-
-        function renderDashboard() {
-            return `
-                <div class="flex justify-between items-end mb-6"><div><h1 class="text-3xl font-bold text-gray-900">Recommended for You</h1><p class="text-gray-500 mt-1">Based on your survey results</p></div></div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    ${COURSES.map(course => `
-                        <div class="bg-white group rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer">
-                            <div class="relative h-48 overflow-hidden"><img src="${course.image}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" /><div class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-brand-dark uppercase tracking-wide shadow-sm">${course.platform}</div></div>
-                            <div class="p-5">
-                                <div class="flex gap-2 mb-3">${course.tags.map(tag => `<span class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md">${tag}</span>`).join('')}</div>
-                                <h3 class="font-bold text-gray-900 mb-2 line-clamp-2 h-12">${course.title}</h3>
-                                <p class="text-sm text-gray-600 mb-4">${course.instructor}</p>
-                                <div class="flex items-center justify-between pt-4 border-t border-gray-50"><div class="flex items-center text-amber-400 text-sm font-bold"><i class="fas fa-star mr-1"></i> ${course.rating}</div><button class="text-brand-dark text-sm font-medium hover:text-brand-teal flex items-center gap-1">View <i class="fas fa-play-circle"></i></button></div>
-                            </div>
-                        </div>`).join('')}
-                </div>
-                <div class="mt-12 bg-gradient-to-r from-gray-900 to-blue-900 rounded-2xl p-8 text-white relative overflow-hidden">
-                    <div class="relative z-10 max-w-2xl"><h2 class="text-2xl font-bold mb-2">Accelerate your career with SkillNex</h2><p class="text-gray-300 mb-6">Get 1-on-1 guidance from experts.</p><button onclick="setView('experts')" class="bg-white text-brand-dark px-6 py-2 rounded-lg font-medium shadow-sm hover:bg-gray-100 transition-colors">Find a Mentor</button></div>
-                </div>`;
-        }
-
-        function renderExperts() {
-            return `
-                <div class="text-center max-w-2xl mx-auto mb-10"><h2 class="text-3xl font-bold text-gray-900 mb-3">Industry Experts</h2><p class="text-gray-500">Book 1-on-1 sessions to get code reviews, career advice, and interview prep.</p></div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    ${EXPERTS.map(expert => `
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-                            <div class="relative mb-4"><img src="${expert.image}" class="w-24 h-24 rounded-full object-cover border-4 border-gray-100" />${expert.available ? '<div class="absolute bottom-1 right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>' : ''}</div>
-                            <h3 class="text-xl font-bold text-gray-900">${expert.name}</h3><p class="text-brand-teal font-medium mb-1">${expert.role}</p><p class="text-gray-500 text-sm mb-6">${expert.company}</p>
-                            <button onclick="handleConnect(${expert.id})" class="w-full px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${state.isPremium ? 'bg-brand-dark text-white hover:opacity-90 shadow-md' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'}">${state.isPremium ? '<i class="fas fa-calendar-alt"></i> Schedule' : '<i class="fas fa-lock"></i> Connect'}</button>
-                        </div>`).join('')}
-                </div>`;
-        }
-
-        function renderSubscription() {
-            return `
-                <div class="max-w-6xl mx-auto">
-                    <div class="text-center mb-10"><h2 class="text-3xl font-bold text-gray-900">Choose Your Plan</h2><p class="text-gray-500 mt-2">Invest in your future with SkillNex Premium</p></div>
-                    <div class="grid md:grid-cols-3 gap-6 items-start">
-                        <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                            <h3 class="text-xl font-bold text-gray-900">Free Plan</h3><p class="text-3xl font-bold mt-4 mb-6">₹0</p>
-                            <button class="w-full px-4 py-2 rounded-lg font-medium border-2 border-gray-300 text-gray-400 opacity-50 cursor-not-allowed">Current Plan</button>
-                        </div>
-                        <div class="bg-white p-6 rounded-2xl border border-indigo-100 shadow-md">
-                            <h3 class="text-xl font-bold text-brand-dark">Monthly Plan</h3><p class="text-3xl font-bold mt-4 mb-6">₹99/mo</p>
-                            <button onclick="upgrade('monthly')" ${state.isPremium && state.planType === 'monthly' ? 'disabled' : ''} class="w-full px-4 py-2 rounded-lg font-medium bg-brand-dark text-white hover:opacity-90 shadow-md ${state.isPremium && state.planType === 'monthly' ? 'opacity-50' : ''}">${state.isPremium && state.planType === 'monthly' ? 'Active Plan' : 'Subscribe Monthly'}</button>
-                        </div>
-                        <div class="bg-white p-6 rounded-2xl border-2 border-brand-teal shadow-xl relative md:-translate-y-2">
-                            <div class="absolute top-0 right-0 bg-brand-teal text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-lg">BEST VALUE</div>
-                            <h3 class="text-xl font-bold text-gray-900">Annual Plan</h3><p class="text-3xl font-bold mt-4 mb-1">₹1099/yr</p>
-                            <button onclick="upgrade('yearly')" ${state.isPremium && state.planType === 'yearly' ? 'disabled' : ''} class="w-full px-4 py-3 rounded-lg font-medium bg-gradient-to-r from-brand-teal to-teal-400 text-white shadow-md ${state.isPremium && state.planType === 'yearly' ? 'opacity-50' : ''}">${state.isPremium && state.planType === 'yearly' ? 'Active Plan' : 'Subscribe Annually'}</button>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        function renderProgress() {
-            return `<div class="max-w-3xl mx-auto"><h2 class="text-2xl font-bold mb-6">My Learning Progress</h2><div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6"><div class="flex justify-between items-center mb-4"><div><h3 class="font-bold text-lg">Web Dev</h3><p class="text-sm text-gray-500">Udemy</p></div><span class="font-bold text-brand-dark text-xl">75%</span></div><div class="w-full bg-gray-100 rounded-full h-3"><div class="bg-brand-dark h-3 rounded-full" style="width: 75%"></div></div></div></div>`;
+            if(state.view === 'dashboard') return `<div class="flex justify-between items-end mb-6"><div><h1 class="text-3xl font-bold text-gray-900">Recommended for You</h1><p class="text-gray-500 mt-1">Based on your survey results</p></div></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">${COURSES.map(c => `<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"><div class="relative h-48 overflow-hidden"><img src="${c.image}" class="w-full h-full object-cover" /><div class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-brand-dark uppercase tracking-wide shadow-sm">${c.platform}</div></div><div class="p-5"><h3 class="font-bold text-gray-900 mb-2 h-12 line-clamp-2">${c.title}</h3><div class="flex items-center justify-between"><div class="flex items-center text-amber-400 text-sm font-bold"><i class="fas fa-star mr-1"></i> ${c.rating}</div><button class="text-brand-dark text-sm font-medium">View</button></div></div></div>`).join('')}</div><div class="mt-12 bg-gradient-to-r from-gray-900 to-blue-900 rounded-2xl p-8 text-white"><h2 class="text-2xl font-bold mb-2">Accelerate your career</h2><p class="text-gray-300 mb-6">Get 1-on-1 guidance from experts.</p><button onclick="setView('experts')" class="bg-white text-brand-dark px-6 py-2 rounded-lg font-medium">Find a Mentor</button></div>`;
+            if(state.view === 'experts') return `<div class="text-center max-w-2xl mx-auto mb-10"><h2 class="text-3xl font-bold text-gray-900 mb-3">Industry Experts</h2><p class="text-gray-500">Book 1-on-1 sessions.</p></div><div class="grid grid-cols-1 md:grid-cols-3 gap-8">${EXPERTS.map(e => `<div class="bg-white rounded-xl shadow-sm border p-6 text-center"><img src="${e.image}" class="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-gray-100" /><h3 class="text-xl font-bold">${e.name}</h3><p class="text-brand-teal font-medium mb-1">${e.role}</p><button onclick="handleConnect(${e.id})" class="w-full px-4 py-2 rounded-lg font-medium mt-4 ${state.isPremium ? 'bg-brand-dark text-white' : 'border border-gray-200'}">${state.isPremium ? 'Schedule' : 'Connect'}</button></div>`).join('')}</div>`;
+            if(state.view === 'subscription') return `<div class="max-w-6xl mx-auto"><div class="text-center mb-10"><h2 class="text-3xl font-bold">Plans</h2></div><div class="grid md:grid-cols-3 gap-6"><div class="bg-white p-6 rounded-2xl border shadow-sm"><h3 class="text-xl font-bold">Free</h3><p class="text-3xl font-bold mt-4 mb-6">₹0</p><button disabled class="w-full border rounded-lg py-2 opacity-50">Current</button></div><div class="bg-white p-6 rounded-2xl border border-indigo-100 shadow-md"><h3 class="text-xl font-bold text-brand-dark">Monthly</h3><p class="text-3xl font-bold mt-4 mb-6">₹99/mo</p><button onclick="upgrade('monthly')" class="w-full bg-brand-dark text-white rounded-lg py-2">Subscribe</button></div><div class="bg-white p-6 rounded-2xl border-2 border-brand-teal shadow-xl"><h3 class="text-xl font-bold">Annual</h3><p class="text-3xl font-bold mt-4 mb-6">₹1099/yr</p><button onclick="upgrade('yearly')" class="w-full bg-brand-teal text-white rounded-lg py-2">Subscribe</button></div></div></div>`;
+            return `<div class="max-w-3xl mx-auto"><h2 class="text-2xl font-bold mb-6">Progress</h2><div class="bg-white rounded-xl shadow-sm border p-6"><div class="flex justify-between mb-4"><h3>Web Dev</h3><span class="font-bold text-brand-dark">75%</span></div><div class="bg-gray-100 rounded-full h-3"><div class="bg-brand-dark h-3 rounded-full" style="width:75%"></div></div></div></div>`;
         }
 
         function renderModals() {
             const mc = document.getElementById('modal-container');
-            if (state.modals.premium) {
-                mc.innerHTML = `<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 fade-in"><div class="bg-white rounded-2xl p-6 text-center max-w-sm"><i class="fas fa-award text-3xl text-amber-500 mb-4"></i><h4 class="text-xl font-bold mb-2">Go Premium</h4><p class="mb-6 text-gray-500">Remove ads & unlock experts.</p><div class="grid grid-cols-2 gap-3"><button onclick="upgrade('monthly')" class="border p-3 rounded-xl font-bold">Monthly ₹99</button><button onclick="upgrade('yearly')" class="bg-brand-teal text-white p-3 rounded-xl font-bold">Yearly ₹1099</button></div><button onclick="closeModals()" class="mt-4 text-gray-400">Close</button></div></div>`;
-            } else if (state.modals.schedule && state.selectedExpert) {
-                mc.innerHTML = `<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 fade-in"><div class="bg-white rounded-2xl p-6 text-center max-w-sm"><h4 class="text-xl font-bold mb-4">Book Session</h4><button onclick="confirmBooking()" class="w-full bg-brand-dark text-white py-2 rounded-lg">Confirm</button><button onclick="closeModals()" class="mt-4 text-gray-400">Cancel</button></div></div>`;
-            } else {
-                mc.innerHTML = '';
-            }
+            if (state.modals.premium) { mc.innerHTML = `<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 fade-in"><div class="bg-white rounded-2xl p-6 text-center max-w-sm"><i class="fas fa-award text-3xl text-amber-500 mb-4"></i><h4 class="text-xl font-bold mb-2">Go Premium</h4><p class="mb-6 text-gray-500">Remove ads & unlock experts.</p><div class="grid grid-cols-2 gap-3"><button onclick="upgrade('monthly')" class="border p-3 rounded-xl font-bold">Monthly ₹99</button><button onclick="upgrade('yearly')" class="bg-brand-teal text-white p-3 rounded-xl font-bold">Yearly ₹1099</button></div><button onclick="closeModals()" class="mt-4 text-gray-400">Close</button></div></div>`; }
+            else if (state.modals.schedule) { mc.innerHTML = `<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 fade-in"><div class="bg-white rounded-2xl p-6 text-center max-w-sm"><h4 class="text-xl font-bold mb-4">Book Session</h4><button onclick="confirmBooking()" class="w-full bg-brand-dark text-white py-2 rounded-lg">Confirm</button><button onclick="closeModals()" class="mt-4 text-gray-400">Cancel</button></div></div>`; }
+            else { mc.innerHTML = ''; }
         }
 
         // --- Actions ---
-        window.startApp = function() { state.introShown = true; renderApp(); };
-        window.handleSurveyAnswer = function(ans) {
-            if (state.surveyStep < SURVEY_QUESTIONS.length - 1) { state.surveyStep++; renderApp(); } 
-            else { 
-                state.surveyCompleted = true; 
-                state.view = 'dashboard'; 
-                renderApp(); 
-                startAdLoop(); // START ADS FOR FREE USER
-            }
-        };
+        window.startApp = function() { state.introShown = true; renderApp(); renderAIWidget(); };
+        window.handleSurveyAnswer = function(ans) { if (state.surveyStep < SURVEY_QUESTIONS.length - 1) { state.surveyStep++; renderApp(); } else { state.surveyCompleted = true; state.view = 'dashboard'; renderApp(); startAdLoop(); } };
         window.setView = function(v) { state.view = v; state.isMenuOpen = false; renderApp(); };
         window.toggleMenu = function() { state.isMenuOpen = !state.isMenuOpen; renderApp(); };
-        window.handleConnect = function(id) { 
-            if (id === null) { state.modals.premium = true; renderModals(); return; } // Called from Ad
-            const exp = EXPERTS.find(e => e.id === id); 
-            if (state.isPremium) { state.selectedExpert = exp; state.modals.schedule = true; } else { state.modals.premium = true; } 
-            renderModals(); 
-        };
-        window.upgrade = function(p) { 
-            state.planType = p; state.isPremium = true; state.modals.premium = false; 
-            stopAdLoop(); // STOP ADS
-            alert('Premium Active! Ads removed.'); 
-            renderApp(); 
-        };
+        window.handleConnect = function(id) { if (id === null) { state.modals.premium = true; renderModals(); return; } const exp = EXPERTS.find(e => e.id === id); if (state.isPremium) { state.selectedExpert = exp; state.modals.schedule = true; } else { state.modals.premium = true; } renderModals(); };
+        window.upgrade = function(p) { state.planType = p; state.isPremium = true; state.modals.premium = false; stopAdLoop(); alert('Premium Active! Ads removed.'); renderApp(); };
         window.confirmBooking = function() { alert('Booked!'); closeModals(); };
         window.closeModals = function() { state.modals.premium = false; state.modals.schedule = false; renderModals(); };
         window.closeAd = function() { state.showAd = false; renderAds(); };
