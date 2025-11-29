@@ -27,18 +27,20 @@
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
         .slide-up { animation: slideUp 0.6s ease-out; }
         .pop-in { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .pulse { animation: pulse 2s infinite; }
         .logo-hover:hover { transform: scale(1.05); transition: transform 0.3s ease; }
         
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
         
         /* Scrollbars */
         .modal-content::-webkit-scrollbar, .chat-scroll::-webkit-scrollbar { width: 6px; }
         .modal-content::-webkit-scrollbar-track, .chat-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
         .modal-content::-webkit-scrollbar-thumb, .chat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         
-        /* Typing Animation */
+        /* Chat Typing Indicator */
         .typing-indicator span { display: inline-block; width: 5px; height: 5px; background-color: #9CA3AF; border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; margin: 0 1px; }
         .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
         .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
@@ -58,7 +60,7 @@
     <div id="notification-container" class="fixed top-4 right-4 z-[70] flex flex-col gap-2 pointer-events-none"></div>
 
     <script>
-        // --- 1. SVG Logo ---
+        // --- 1. SVG Logo Definition ---
         const LOGO_SVG = `
         <svg viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
             <path d="M20 15 H80 C88 15 92 20 92 28 V55 C92 80 50 100 50 100 C50 100 8 80 8 55 V28 C8 20 12 15 20 15Z" stroke="#0B2545" stroke-width="8" fill="white"/>
@@ -69,25 +71,24 @@
             <path d="M55 75 Q 60 82 70 75" stroke="#0B2545" stroke-width="7" stroke-linecap="round" fill="none"/>
         </svg>`;
 
-        // --- 2. Data ---
+        // --- 2. Data Sets ---
         const COURSES = [
             { id: 1, category: 'data', platform: 'Coursera', title: 'Google Data Analytics', instructor: 'Google', rating: 4.8, image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80', tags: ['Data', 'Beginner'], reason: "Great for analytical minds" },
             { id: 2, category: 'web', platform: 'Udemy', title: 'Web Development Bootcamp', instructor: 'Angela Yu', rating: 4.9, image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80', tags: ['Web', 'Full Stack'], reason: "Best for builders" },
             { id: 3, category: 'data', platform: 'Udacity', title: 'AI for Trading', instructor: 'Udacity', rating: 4.7, image: 'https://images.unsplash.com/photo-1611974765270-ca12588265b6?auto=format&fit=crop&w=800&q=80', tags: ['AI', 'Finance'], reason: "Combines Math & Logic" },
-            { id: 4, category: 'data', platform: 'Coursera', title: 'Machine Learning', instructor: 'Andrew Ng', rating: 4.9, image: 'https://images.unsplash.com/photo-1527474305487-b87b222841cc?auto=format&fit=crop&w=800&q=80', tags: ['AI', 'Advanced'] },
-            { id: 5, category: 'business', platform: 'Udacity', title: 'Digital Product Management', instructor: 'Product School', rating: 4.6, image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=80', tags: ['Business', 'Leadership'] },
-            { id: 6, category: 'design', platform: 'Domestika', title: 'UX/UI Design Fundamentals', instructor: 'Michael Bierman', rating: 4.8, image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=800&q=80', tags: ['Design', 'Creative'], reason: "Perfect for visual thinkers" },
-            { id: 7, category: 'web', platform: 'Coursera', title: 'React Native Specialization', instructor: 'Meta', rating: 4.7, image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=800&q=80', tags: ['Mobile', 'App Dev'] },
-            { id: 8, category: 'business', platform: 'Udemy', title: 'MBA in a Box', instructor: '365 Careers', rating: 4.5, image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80', tags: ['Business', 'Strategy'], reason: "For future leaders" }
+            { id: 4, category: 'design', platform: 'Domestika', title: 'UX/UI Design Fundamentals', instructor: 'M. Bierman', rating: 4.8, image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=800&q=80', tags: ['Design', 'Creative'], reason: "Perfect for visual thinkers" },
+            { id: 5, category: 'business', platform: 'Udemy', title: 'MBA in a Box', instructor: '365 Careers', rating: 4.5, image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80', tags: ['Business', 'Strategy'], reason: "For future leaders" },
+            { id: 6, category: 'web', platform: 'Coursera', title: 'React Native Specialization', instructor: 'Meta', rating: 4.7, image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=800&q=80', tags: ['Mobile', 'Dev'], reason: "Advanced coding track" },
+            { id: 7, category: 'design', platform: 'Coursera', title: 'Graphic Design Specialization', instructor: 'CalArts', rating: 4.7, image: 'https://images.unsplash.com/photo-1626785774573-4b799314346d?auto=format&fit=crop&w=800&q=80', tags: ['Design', 'Art'], reason: "Pure creativity" },
+            { id: 8, category: 'business', platform: 'LinkedIn', title: 'Strategic Thinking', instructor: 'Dorie Clark', rating: 4.6, image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=800&q=80', tags: ['Strategy', 'Leadership'], reason: "Management skills" }
         ];
 
-        // --- UPDATED EXPERTS LIST ---
         const EXPERTS = [
-            { id: 1, name: 'Sarah Chen', role: 'Product Manager', company: 'Google', image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80', available: true },
-            { id: 2, name: 'David Miller', role: 'Staff Engineer', company: 'Netflix', image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80', available: true },
-            { id: 3, name: 'Elena Rodriguez', role: 'Data Scientist', company: 'Spotify', image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80', available: true },
-            // Added Altaf Khalid here with a placeholder image
-            { id: 4, name: 'Altaf Khalid', role: 'Soft Skills Trainer', company: 'SkillNex Academy', image: './IMG_0681.jpeg',available: true }
+            { id: 1, name: 'Altaf Khalid', role: 'Soft Skills Trainer', company: 'SkillNex Academy', image: './IMG_0681.jpeg', available: true },
+            { id: 2, name: 'Sarah Chen', role: 'Product Manager', company: 'Google', image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80', available: true },
+            { id: 3, name: 'David Miller', role: 'Staff Engineer', company: 'Netflix', image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80', available: true },
+            { id: 4,name: 'Elena Rodriguez', role: 'Data Scientist', company: 'Spotify', image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80', available: true }
+            
         ];
 
         const SURVEY_QUESTIONS = [
@@ -115,7 +116,7 @@
             { title: "Cloud Hosting Sale", desc: "Host your website for just $1/month.", color: "bg-orange-600" }
         ];
 
-        // --- 3. State ---
+        // --- 3. State Management ---
         let state = {
             introShown: false,
             surveyCompleted: false,
@@ -125,6 +126,7 @@
             userPersona: null,
             recommendedCourses: [],
             view: 'dashboard',
+            history: ['dashboard'], // NEW: Navigation Stack
             isPremium: false,
             planType: null,
             isMenuOpen: false,
@@ -146,7 +148,10 @@
         const INTERVIEW_QS = ["Tell me about a challenge you faced.","Where do you see yourself in 5 years?","What is your greatest strength?"];
 
         // --- 4. Initialization ---
-        function init() { renderApp(); renderAIWidget(); }
+        function init() { 
+            renderApp(); 
+            renderAIWidget(); 
+        }
 
         // --- 5. Notifications ---
         function showNotification(message, type = 'success') {
@@ -161,7 +166,7 @@
             setTimeout(() => { notif.classList.add('translate-x-full', 'opacity-0'); setTimeout(() => notif.remove(), 300); }, 4000);
         }
 
-        // --- 6. Core Logic ---
+        // --- 6. Core Logic & Navigation ---
         function analyzeSurvey() {
             let scores = { data: 0, web: 0, design: 0, business: 0 };
             state.surveyAnswers.forEach((ans, idx) => {
@@ -178,9 +183,42 @@
             state.recommendedCourses = scoredCourses;
         }
 
-        function startAdLoop() { if(state.adTimerId) clearInterval(state.adTimerId); if(!state.isPremium) state.adTimerId = setInterval(() => { if(!state.showAd && !state.modals.premium && !state.modals.schedule && !state.isPremium && !state.isChatOpen) { state.showAd = true; renderAds(); } }, 3000); }
+        function startAdLoop() { 
+            if(state.adTimerId) clearInterval(state.adTimerId); 
+            if(!state.isPremium) {
+                state.adTimerId = setInterval(() => { 
+                    if(!state.showAd && !state.modals.premium && !state.modals.schedule && !state.isPremium && !state.isChatOpen && !state.analyzing) { 
+                        state.showAd = true; 
+                        renderAds(); 
+                    } 
+                }, 3000); 
+            }
+        }
         function stopAdLoop() { if(state.adTimerId) { clearInterval(state.adTimerId); state.adTimerId = null; } state.showAd = false; renderAds(); }
         function closeAd() { state.showAd = false; renderAds(); }
+
+        // --- Navigation Logic ---
+        function setView(view) {
+            // If going to dashboard, reset history
+            if (view === 'dashboard') {
+                state.history = ['dashboard'];
+            } else if (state.view !== view) {
+                // Push to history if navigating deeper
+                state.history.push(view);
+            }
+            state.view = view;
+            state.isMenuOpen = false;
+            renderApp();
+        }
+
+        function goBack() {
+            if (state.history.length > 1) {
+                state.history.pop(); // Remove current view
+                const prevView = state.history[state.history.length - 1]; // Get previous
+                state.view = prevView;
+                renderApp();
+            }
+        }
 
         // --- 7. Enhanced AI Logic ---
         function toggleChat() { state.isChatOpen = !state.isChatOpen; renderAIWidget(); }
@@ -202,8 +240,7 @@
 
         function processMessage(input) {
             const lowerInput = input.toLowerCase();
-
-            // 1. Navigation
+            // Navigation
             if (lowerInput.includes('expert') || lowerInput.includes('mentor')) {
                 setView('experts');
                 return { text: "Navigating to Experts section...", html: `<button onclick="handleConnect(null)" class="text-xs bg-brand-dark text-white px-3 py-1 rounded mt-2">Book Now</button>` };
@@ -211,44 +248,24 @@
             if (lowerInput.includes('dashboard') || lowerInput.includes('home')) { setView('dashboard'); return { text: "Welcome back to your Dashboard." }; }
             if (lowerInput.includes('progress')) { setView('progress'); return { text: "Here is your progress view." }; }
             if (lowerInput.includes('plan') || lowerInput.includes('subscri')) { setView('subscription'); return { text: "Here are our premium plans." }; }
-
-            // 2. Course Finder
+            // Course Finder
             if (lowerInput.includes('course') || lowerInput.includes('learn') || lowerInput.includes('find') || lowerInput.includes('search')) {
-                const matches = COURSES.filter(c => 
-                    lowerInput.includes(c.category) || 
-                    lowerInput.includes(c.platform.toLowerCase()) ||
-                    c.title.toLowerCase().split(' ').some(word => lowerInput.includes(word))
-                );
-                
+                const matches = COURSES.filter(c => lowerInput.includes(c.category) || lowerInput.includes(c.platform.toLowerCase()) || c.title.toLowerCase().split(' ').some(word => lowerInput.includes(word)));
                 if (matches.length > 0) {
-                    const cardsHtml = matches.slice(0, 3).map(c => `
-                        <div class="mt-2 p-2 bg-gray-100 rounded-lg border border-gray-200">
-                            <div class="font-bold text-xs text-brand-dark line-clamp-1">${c.title}</div>
-                            <div class="text-[10px] text-gray-600">${c.platform} • ${c.rating}★</div>
-                        </div>
-                    `).join('');
+                    const cardsHtml = matches.slice(0, 3).map(c => `<div class="mt-2 p-2 bg-gray-100 rounded-lg border border-gray-200"><div class="font-bold text-xs text-brand-dark line-clamp-1">${c.title}</div><div class="text-[10px] text-gray-600">${c.platform} • ${c.rating}★</div></div>`).join('');
                     return { text: `Found ${matches.length} matching courses:`, html: cardsHtml };
-                } else {
-                    return { text: "I couldn't find specific courses for that. Try searching for 'web', 'data', or 'design'." };
-                }
+                } else { return { text: "I couldn't find specific courses for that. Try searching for 'web', 'data', or 'design'." }; }
             }
-
-            // 3. Motivation
+            // Motivation
             if (lowerInput.includes('stuck') || lowerInput.includes('motivat') || lowerInput.includes('sad') || lowerInput.includes('tired')) {
-                const quotes = [
-                    "\"The only way to do great work is to love what you do.\" – Steve Jobs",
-                    "\"Believe you can and you're halfway there.\" – Theodore Roosevelt",
-                    "\"Don't watch the clock; do what it does. Keep going.\""
-                ];
+                const quotes = ["\"The only way to do great work is to love what you do.\" – Jobs", "\"Believe you can and you're halfway there.\" – Roosevelt", "\"Don't watch the clock; do what it does. Keep going.\""];
                 return { text: quotes[Math.floor(Math.random() * quotes.length)] };
             }
-
-            // 4. Smart Actions
+            // Smart Actions
             if (lowerInput.includes('upgrade') || lowerInput.includes('premium')) {
                 return { text: "Upgrade to remove ads and unlock mentors.", html: `<button onclick="upgrade('monthly')" class="w-full mt-2 bg-brand-teal text-white py-1 rounded text-xs font-bold">Upgrade Now (₹99)</button>` };
             }
-
-            // Existing Modes
+            // Modes
             if (state.chatMode === 'quiz') {
                 const q = QUIZ_DATA[state.quizStep];
                 let fb = lowerInput.includes(q.a) ? "✅ Correct!" : `❌ Answer: ${q.a}`;
@@ -298,7 +315,34 @@
         }
 
         function renderNavbar() {
-            return `<nav class="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="flex justify-between h-16 items-center"><div class="flex items-center gap-2 cursor-pointer" onclick="setView('dashboard')"><div class="w-8 h-8">${LOGO_SVG}</div><span class="text-xl font-bold tracking-tight text-brand-dark">SkillNex</span></div><div class="relative"><button onclick="toggleMenu()" class="flex items-center gap-2 p-1 pr-3 rounded-full border border-gray-200 hover:shadow-md"><img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80" class="w-8 h-8 rounded-full object-cover" /><div class="hidden md:block text-left"><p class="text-xs font-bold text-gray-700">Alex Doe</p><p class="text-[10px] font-medium text-brand-teal uppercase">${state.isPremium ? 'Premium' : 'Free'}</p></div><i class="fas fa-bars text-gray-500 ml-1"></i></button>${state.isMenuOpen ? `<div class="fixed inset-0 z-30" onclick="toggleMenu()"></div><div class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-40">${renderMenuItem('fa-book-reader','Progress','progress')}${renderMenuItem('fa-users','Experts','experts')}${renderMenuItem('fa-credit-card','Plans','subscription')}<div class="h-px bg-gray-100 my-2"></div><button onclick="logout()" class="w-full flex items-center px-4 py-3 text-red-600">Logout</button></div>` : ''}</div></div></div></nav>`;
+            // NEW: Back Button Logic
+            const showBackButton = state.history.length > 1;
+            
+            return `
+            <nav class="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between h-16 items-center">
+                        <div class="flex items-center gap-2">
+                            ${showBackButton 
+                                ? `<button onclick="goBack()" class="mr-2 p-2 hover:bg-gray-100 rounded-full transition-colors"><i class="fas fa-arrow-left text-lg text-gray-600"></i></button>`
+                                : ''
+                            }
+                            <div class="flex items-center gap-2 cursor-pointer" onclick="setView('dashboard')">
+                                <div class="w-8 h-8">${LOGO_SVG}</div>
+                                <span class="text-xl font-bold tracking-tight text-brand-dark">SkillNex</span>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <button onclick="toggleMenu()" class="flex items-center gap-2 p-1 pr-3 rounded-full border border-gray-200 hover:shadow-md">
+                                <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80" class="w-8 h-8 rounded-full object-cover" />
+                                <div class="hidden md:block text-left"><p class="text-xs font-bold text-gray-700">Alex Doe</p><p class="text-[10px] font-medium text-brand-teal uppercase">${state.isPremium ? 'Premium' : 'Free'}</p></div>
+                                <i class="fas fa-bars text-gray-500 ml-1"></i>
+                            </button>
+                            ${state.isMenuOpen ? `<div class="fixed inset-0 z-30" onclick="toggleMenu()"></div><div class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-40">${renderMenuItem('fa-book-reader','Progress','progress')}${renderMenuItem('fa-users','Experts','experts')}${renderMenuItem('fa-credit-card','Plans','subscription')}<div class="h-px bg-gray-100 my-2"></div><button onclick="logout()" class="w-full flex items-center px-4 py-3 text-red-600">Logout</button></div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </nav>`;
         }
         function renderMenuItem(i,l,v) { return `<button onclick="setView('${v}'); toggleMenu()" class="w-full flex items-center px-4 py-3 text-sm hover:bg-gray-50"><i class="fas ${i} w-6 opacity-70 mr-2"></i> ${l}</button>`; }
 
@@ -370,12 +414,30 @@
                 setTimeout(() => {
                     state.analyzing = false;
                     state.view = 'dashboard';
+                    // Reset history to ensure dashboard is root
+                    state.history = ['dashboard'];
                     renderApp();
                     startAdLoop();
                 }, 2500);
             } 
         };
-        window.setView = function(v) { state.view = v; state.isMenuOpen = false; renderApp(); };
+        window.setView = function(v) { 
+            if (v === 'dashboard') {
+                state.history = ['dashboard'];
+            } else if (state.view !== v) {
+                state.history.push(v);
+            }
+            state.view = v; 
+            state.isMenuOpen = false; 
+            renderApp(); 
+        };
+        window.goBack = function() {
+            if (state.history.length > 1) {
+                state.history.pop();
+                state.view = state.history[state.history.length - 1];
+                renderApp();
+            }
+        };
         window.toggleMenu = function() { state.isMenuOpen = !state.isMenuOpen; renderApp(); };
         window.handleConnect = function(id) { if (id === null) { state.modals.premium = true; renderModals(); return; } const exp = EXPERTS.find(e => e.id === id); if (state.isPremium) { state.selectedExpert = exp; state.modals.schedule = true; } else { state.modals.premium = true; } renderModals(); };
         window.upgrade = function(p) { state.planType = p; state.isPremium = true; state.modals.premium = false; stopAdLoop(); alert('Premium Active!'); renderApp(); };
